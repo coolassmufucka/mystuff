@@ -1,0 +1,127 @@
+-- Configurable Movement & Physics Variables
+local maxSpeed = 75     -- Max Speed Cap (studs per/s)
+local acceleration = .4 -- Rate of Acceleration (how fast you speed up)
+local deceleration = .1 -- Rate of Acceleration (how fast you slow down)
+local turnSpeed = .6    -- Turn Speed (how fast you rotate)
+local friction = .98    -- Friction Coefficient (1 = sliding forever, 0 = instant stop)
+
+-- Configurable Hover Physics Variables
+local height = 3.5      -- Hover Height (distance above the ground)
+local force = 10        -- Hover Force (how strong the force is to maintain hover effect)
+local damping = .5      -- Damping Effect (how much the hover force is dampened)
+
+-- !!ONLY CHANGE STUFF PAST THIS POINT IF YOU KNOW WHAT YOU ARE DOING!!
+
+-- Services
+local inputService = game:GetService("UserInputService")
+local runService = game:GetService("RunService")
+
+-- Player/Character Variables
+local player = game:GetService("Players").LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+-- Gyroscope to Prevent Tilting
+local gyro = Instance.new("BodyGyro",rootPart)
+gyro.MaxTorque = Vector3.new(math.huge,math.huge,math.huge)
+gyro.P = 1000
+gyro.D = 500
+gyro.CFrame = rootPart.CFrame
+
+-- Direction Variables for Movement Input
+local dir = {
+	W = false, -- Forward
+	A = false, -- Left
+	S = false, -- Backward
+	D = false  -- Right
+}
+
+-- Current Status Variables
+local speed = 0 -- Current Speed (DO NOT CHANGE)
+local angle = 0 -- Current Angle (DO NOT CHANGE)
+
+-- Input Handling (beginning of key press)
+inputService.InputBegan:Connect(function(input,pro)
+	if not pro then
+		if input.KeyCode == Enum.KeyCode.W then
+			dir.W = true
+		elseif input.KeyCode == Enum.KeyCode.A then
+			dir.A = true
+		elseif input.KeyCode == Enum.KeyCode.S then
+			dir.S = true
+		elseif input.KeyCode == Enum.KeyCode.D then
+			dir.D = true
+		end
+	end
+end)
+
+-- Input Handling (ending of key press)
+inputService.InputEnded:Connect(function(input,pro)
+	if not pro then
+		if input.KeyCode == Enum.KeyCode.W then
+			dir.W = false
+		elseif input.KeyCode == Enum.KeyCode.A then
+			dir.A = false
+		elseif input.KeyCode == Enum.KeyCode.S then
+			dir.S = false
+		elseif input.KeyCode == Enum.KeyCode.D then
+			dir.D = false
+		end
+	end
+end)
+
+-- Main Logic Loop
+runService.RenderStepped:Connect(function()
+	if not humanoid.Sit then
+		humanoid.Sit = true
+	end
+
+	if humanoid.Sit then
+		-- Initialize Variables
+		local moveDirection = Vector3.new(0,0,0)
+		local turnDirection = 0
+
+		-- Movement Logic
+		if dir.W then
+			speed = math.clamp(speed + acceleration, -maxSpeed, maxSpeed)
+		elseif dir.S then
+			speed = math.clamp(speed - acceleration, -maxSpeed / 2.5, maxSpeed / 2.5)
+		else
+			speed = speed * friction
+		end
+		moveDirection = rootPart.CFrame.LookVector * speed
+
+		-- Turning Logic
+		if dir.D then
+			turnDirection = -turnSpeed
+		elseif dir.A then
+			turnDirection = turnSpeed
+		end
+		if not dir.A and not dir.D then
+			angle = math.clamp(angle * .85, -turnSpeed, turnSpeed)
+		else
+			angle = math.clamp(angle + turnDirection, -turnSpeed, turnSpeed)
+		end
+
+		-- Apply Turning Velocity
+		rootPart.CFrame = rootPart.CFrame * CFrame.Angles(0, math.rad(angle), 0)
+
+		-- Apply Movement Velocity
+		rootPart.Velocity = moveDirection
+
+		-- Update Gyro
+		gyro.CFrame = CFrame.new(rootPart.Position,rootPart.Position + rootPart.CFrame.LookVector)
+
+		-- Hover Physics
+		local ray = Ray.new(rootPart.Position,Vector3.new(0,-1,0)*(height+30))
+		local hit, position = workspace:FindPartOnRay(ray,character)
+		if hit then
+			local curHeight = (rootPart.Position-position).magnitude
+			local dif = height - curHeight
+			local hoverVelocity = dif * force
+			local hoverDamping = rootPart.Velocity.Y * damping
+			rootPart.Velocity = Vector3.new(rootPart.Velocity.X,hoverVelocity-hoverDamping,rootPart.Velocity.Z)
+		end
+	end
+end)
