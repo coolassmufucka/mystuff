@@ -1,0 +1,24 @@
+--[[CONTROLS
+-- Toggle
+P = Toggle Low Gravity
+]]
+
+-- Configurable Variables
+local lowGravity = 20 -- The Gravity it Changes to when Low Gravity is Active
+
+-- Variable to Save Initial Gravity
+local gravity = workspace.Gravity
+
+-- Services
+local inputService =game:GetService("UserInputService")
+
+-- Input Handling
+inputService.InputBegan:Connect(function(inp,pro)
+	if not pro and inp.KeyCode == Enum.KeyCode.P then
+		if workspace.Gravity == gravity then
+			workspace.Gravity = lowGravity
+		else
+			workspace.Gravity = gravity
+		end
+	end
+end)
