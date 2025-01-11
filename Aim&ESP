@@ -1,0 +1,133 @@
+--[[CONTROLS
+-- Toggle
+H = Enable/Disable ESP
+Z = Enable/Disable Aimbot
+-- Press
+T = Select Player
+]]
+
+-- Initialize Adjustable Variables
+local target = nil
+local aim = false
+
+-- Player Variables
+local player = game:GetService("Players").LocalPlayer
+local camera = workspace.CurrentCamera
+camera.CameraType = Enum.CameraType.Custom
+
+-- Services
+local inputService = game:GetService("UserInputService")
+local repStore = game:GetService("ReplicatedStorage")
+local runService = game:GetService("RunService")
+
+-- Create Folder to Store Players (ESP and Selecting)
+local plrFolder = Instance.new("Model")
+plrFolder.Name = "characters"
+plrFolder.Parent = workspace
+
+-- Create Selection Highlight
+local highlight = Instance.new("Highlight")
+highlight.Parent = repStore
+highlight.FillTransparency = 0.7
+highlight.OutlineTransparency = 0
+highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+highlight.OutlineColor = Color3.new(1, 1, 1)
+highlight.FillColor = Color3.new(0, 1, 0.584)
+
+-- Create Global Highlight
+local ESP = Instance.new("Highlight")
+ESP.Enabled = false
+ESP.Adornee = plrFolder
+ESP.Parent = repStore
+ESP.FillTransparency = 0.8
+ESP.OutlineTransparency = 0.3
+ESP.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+ESP.OutlineColor = Color3.new(1, 1, 1)
+ESP.FillColor = Color3.new(1, 0, 0.184)
+
+-- Player Selection Raycast
+local function ray()
+	local mousePos = inputService:GetMouseLocation()
+	local viewportRay = camera:ViewportPointToRay(mousePos.X,mousePos.Y)
+	local rayParams = RaycastParams.new()
+	rayParams.FilterType = Enum.RaycastFilterType.Include
+	rayParams.FilterDescendantsInstances = {plrFolder}
+	local raycastResult = workspace:Raycast(viewportRay.Origin, viewportRay.Direction * 1000, rayParams)
+	if raycastResult then
+		local hitPart = raycastResult.Instance
+		local hitParent = hitPart and hitPart.Parent
+		if hitParent and hitParent ~= player.Character and hitParent:FindFirstChild("HumanoidRootPart") then
+			return hitParent
+		end
+	end
+	return nil
+end
+
+-- Input Handling
+inputService.InputBegan:Connect(function(inp,processed)
+	if processed then return end
+	if inp.KeyCode == Enum.KeyCode.T then
+		if not target then
+			local raycastTarget = ray()
+			if raycastTarget and raycastTarget:FindFirstChildOfClass("Humanoid") then
+				highlight.Adornee = raycastTarget
+				target = raycastTarget
+			else
+				highlight.Adornee = nil
+				target = nil
+			end
+		else
+			highlight.Adornee = nil
+			target = nil
+		end
+	elseif inp.KeyCode == Enum.KeyCode.H then
+		if not ESP.Enabled then
+			for _, plr in ipairs(game.Players:GetPlayers()) do
+				local char = plr.Character
+				if plr ~= player and char then
+					local hrp = char:FindFirstChild("HumanoidRootPart")
+					local hum = char:FindFirstChildOfClass("Humanoid")
+					if hrp and hum and hum.Health > 0 then
+						char.Parent = plrFolder
+						hrp.Size = Vector3.new(6, 8, 6)
+						hrp.CanCollide = false
+					end
+				end
+			end
+		end
+		ESP.Enabled = not ESP.Enabled
+	elseif inp.KeyCode == Enum.KeyCode.Z then
+		aim = not aim
+	end
+end)
+
+-- Aim Head Loop
+runService.RenderStepped:Connect(function()
+	if aim and target then
+		local hrp = target:FindFirstChild("HumanoidRootPart")
+		if hrp and target:FindFirstChild("Head") then
+			local cameraCFrame = CFrame.lookAt(camera.CFrame.Position, target.Head.Position)
+			camera.CFrame = cameraCFrame
+		end
+	end
+end)
+
+-- Spawn ESP Check Loop
+task.spawn(function()
+	while task.wait(1) do
+		if not ESP.Enabled then
+			for _, plr in ipairs(game.Players:GetPlayers()) do
+				local char = plr.Character
+				if plr ~= player and char then
+					local hrp = char:FindFirstChild("HumanoidRootPart")
+					local hum = char:FindFirstChildOfClass("Humanoid")
+					if hrp and hum and hum.Health > 0 then
+						char.Parent = plrFolder
+						hrp.Size = Vector3.new(6, 8, 6)
+						hrp.CanCollide = false
+					end
+				end
+			end
+		end
+	end
+end)
