@@ -1,0 +1,62 @@
+--[[CONTROLS
+-- Hold
+R = Float Upwards (Slow)
+V = Speedy (Move Very Fast)
+Y = Float Upwards (Fast)
+-- Press
+X = Teleport 30 Studs Ahead
+E = Teleport to Mouse Location
+]]
+
+-- Initialize Adjustable Variables
+local float = false
+local speed = false
+local flyspeed = 40
+
+local inputService = game:GetService("UserInputService")
+local tweenService = game:GetService("TweenService")
+local runService = game:GetService("RunService")
+
+local player = game:GetService("Players").LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local rootPart = char:WaitForChild("HumanoidRootPart")
+local mouse = player:GetMouse()
+
+inputService.InputBegan:Connect(function(inp,processed)
+	if not processed then
+		if inp.KeyCode == Enum.KeyCode.R then
+			float = true
+			flyspeed = 40
+		elseif inp.KeyCode == Enum.KeyCode.V then
+			speed = true
+		elseif inp.KeyCode == Enum.KeyCode.Y then
+			float = true
+			flyspeed = 230 
+		elseif inp.KeyCode == Enum.KeyCode.X then
+			char:MoveTo(rootPart.Position + rootPart.CFrame.LookVector * 30)
+		elseif inp.KeyCode == Enum.KeyCode.E then
+			char:MoveTo(mouse.Hit.Position)
+		end
+	end
+end)
+
+inputService.InputEnded:Connect(function(inp,processed)
+	if not processed then
+		if inp.KeyCode == Enum.KeyCode.R then
+			float = false
+		elseif inp.KeyCode == Enum.KeyCode.V then
+			speed = false
+		end
+	end
+end)
+
+runService.Heartbeat:Connect(function()
+	if char then
+		if float then
+			rootPart.Velocity = Vector3.new(rootPart.Velocity.X,flyspeed,rootPart.Velocity.Z)
+		end
+		if speed then
+			rootPart.Velocity = Vector3.new(rootPart.CFrame.LookVector.X * 200,rootPart.Velocity.Y,rootPart.CFrame.LookVector.Z * 200)
+		end
+	end
+end)
