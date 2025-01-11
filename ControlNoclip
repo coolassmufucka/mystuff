@@ -1,0 +1,69 @@
+--[[CONTROLS
+-- Hold
+X = Noclip Parts While Held
+-- Press
+L = Reset Noclipped Parts
+]]
+
+-- Services
+local inputService = game:GetService("UserInputService")
+local repStore = game:GetService("ReplicatedStorage")
+local players = game:GetService("Players")
+
+-- Player Variables
+local player = players.LocalPlayer
+local mouse = player:GetMouse()
+
+-- Create Folder and Model to Store Selected Parts
+local folder = Instance.new("Folder", repStore)
+local model = Instance.new("Model", workspace)
+local modelHumanoid = Instance.new("Humanoid", model)
+
+-- Create Highlight for Selected Parts
+local highlight = Instance.new("Highlight", model)
+highlight.FillColor = Color3.new(0.596078, 0.596078, 0.596078)
+highlight.OutlineTransparency = 0.5
+highlight.FillTransparency = 0.8
+highlight.DepthMode = Enum.HighlightDepthMode.Occluded
+highlight.Adornee = model
+
+-- Variables to Track State
+local selecting = false
+
+-- Input Handling (beginning of key press)
+inputService.InputBegan:Connect(function(inp, processed)
+	if not processed and inp.KeyCode == Enum.KeyCode.X then
+		selecting = true
+	elseif not processed and inp.KeyCode == Enum.KeyCode.L then
+		for _, obj in ipairs(folder:GetChildren()) do
+			obj.Parent = workspace
+		end
+		for _, obj in ipairs(model:GetChildren()) do
+			if obj:IsA("BasePart") then
+				obj:Destroy()
+			end
+		end
+	end
+end)
+
+-- Input Handling (ending of key press)
+inputService.InputEnded:Connect(function(inp, processed)
+	if not processed and inp.KeyCode == Enum.KeyCode.X then
+		selecting = false
+	end
+end)
+
+-- Main Loop to Handle Selection
+while task.wait(0.05) do
+	if selecting then
+		local target = mouse.Target
+		if target and target:IsA("BasePart") and target.Parent ~= model then
+			local clone = target:Clone()
+			clone.Parent = model
+			clone.Transparency = 0.999
+			clone:ClearAllChildren()
+			clone.CanCollide = false
+			target.Parent = folder
+		end
+	end
+end
