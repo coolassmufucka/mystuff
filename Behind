@@ -1,0 +1,105 @@
+--[[CONTROLS
+-- Toggle
+C = Select Target
+T = Enable/Disable Teleporting Behind Target
+]]
+
+-- Initialize Adjustable Variables
+local target = nil
+local tping = false
+
+-- Player Variables
+local player = game:GetService("Players").LocalPlayer
+local camera = workspace.CurrentCamera
+camera.CameraType = Enum.CameraType.Custom
+
+-- Services
+local inputService = game:GetService("UserInputService")
+local repStore = game:GetService("ReplicatedStorage")
+local runService = game:GetService("RunService")
+
+-- Create Selection Highlight
+local highlight = Instance.new("Highlight")
+highlight.FillTransparency = 0.7
+highlight.OutlineTransparency = 0
+highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+highlight.OutlineColor = Color3.new(1, 1, 1)
+highlight.FillColor = Color3.new(1, 0.0627451, 0.392157)
+highlight.Parent = repStore
+
+-- Input Handling
+inputService.InputBegan:Connect(function(inp, processed)
+	if processed then return end
+	if inp.KeyCode == Enum.KeyCode.C then
+		if not target then
+			local mousePos = inputService:GetMouseLocation()
+			local closePlr
+			local close = math.huge
+			for _, plr in ipairs(game.Players:GetPlayers()) do
+				if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+					local hrp = plr.Character.HumanoidRootPart
+					local screenPos,onScreen = camera:WorldToViewportPoint(hrp.Position)
+					if onScreen then
+						local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+						if distance < close then
+							close = distance
+							closePlr = plr
+						end
+					end
+				end
+			end
+			if closePlr and closePlr.Character and closePlr.Character:FindFirstChildOfClass("Humanoid") then
+				highlight.Adornee = closePlr.Character
+				target = closePlr
+			else
+				tping = false
+				highlight.FillColor = Color3.new(1, 0.0627451, 0.392157)
+				highlight.Adornee = nil
+				target = nil
+				camera.CameraSubject = player.Character:FindFirstChild("Humanoid")
+			end
+		else
+			tping = false
+			highlight.FillColor = Color3.new(1, 0.0627451, 0.392157)
+			highlight.Adornee = nil
+			target = nil
+			camera.CameraSubject = player.Character:FindFirstChild("Humanoid")
+		end
+	elseif inp.KeyCode == Enum.KeyCode.T then
+		tping = not tping
+		if not tping then
+			highlight.FillColor = Color3.new(1, 0.0627451, 0.392157)
+			camera.CameraSubject = player.Character:FindFirstChild("Humanoid")
+		else
+			highlight.FillColor = Color3.new(0, 1, 0.584)
+		end
+	end
+end)
+
+-- Teleport Loop
+runService.RenderStepped:Connect(function()
+	if tping and target and target.Character then
+		local targetChar = target.Character
+		local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if not hrp then return end
+		local direction = (hrp.Position - targetChar.HumanoidRootPart.Position).Unit
+		local forward = targetChar.HumanoidRootPart.CFrame.LookVector
+		local angle = math.deg(math.acos(forward:Dot(direction)))
+		if angle <= 60 then
+			local offset = targetChar.HumanoidRootPart.CFrame.LookVector * -12
+			local newPosition = targetChar.HumanoidRootPart.Position + offset
+			player.Character:SetPrimaryPartCFrame(CFrame.new(newPosition, targetChar.HumanoidRootPart.Position))
+		end
+	end
+end)
+
+-- Target Highlight Loop
+task.spawn(function()
+	while task.wait(0.1) do
+		if target and target.Character then
+			highlight.Adornee = target.Character
+		else
+			highlight.Adornee = nil
+		end
+	end
+end)
