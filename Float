@@ -1,0 +1,95 @@
+-- Services
+local inputService = game:GetService("UserInputService")
+local runService = game:GetService("RunService")
+
+-- Player Variables
+local player = game.Players.LocalPlayer
+local character = player.Character
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local camera = workspace.CurrentCamera
+
+-- Movement Variables
+local move = {
+	W = false,
+	A = false,
+	S = false,
+	D = false,
+	Q = false,
+	E = false
+}
+
+-- Initialize Gravity
+workspace.Gravity = 0
+
+-- Input Handling
+inputService.InputBegan:Connect(function(input, processed) -- Pressed
+	if not processed then
+		if input.KeyCode == Enum.KeyCode.W then
+			move.W = true
+		elseif input.KeyCode == Enum.KeyCode.A then
+			move.A = true
+		elseif input.KeyCode == Enum.KeyCode.S then
+			move.S = true
+		elseif input.KeyCode == Enum.KeyCode.D then
+			move.D = true
+		elseif input.KeyCode == Enum.KeyCode.Q then
+			move.Q = true
+		elseif input.KeyCode == Enum.KeyCode.E then
+			move.E = true
+		elseif input.KeyCode == Enum.KeyCode.R then
+			rootPart.RotVelocity += Vector3.new(math.random(-15,15), math.random(-15,15), math.random(-15,15))
+		end
+	end
+end)
+inputService.InputEnded:Connect(function(input, processed) -- Released
+	if not processed then
+		if input.KeyCode == Enum.KeyCode.W then
+			move.W = false
+		elseif input.KeyCode == Enum.KeyCode.A then
+			move.A = false
+		elseif input.KeyCode == Enum.KeyCode.S then
+			move.S = false
+		elseif input.KeyCode == Enum.KeyCode.D then
+			move.D = false
+		elseif input.KeyCode == Enum.KeyCode.Q then
+			move.Q = false
+		elseif input.KeyCode == Enum.KeyCode.E then
+			move.E = false
+		end
+	end
+end)
+
+-- Movement Logic
+runService.RenderStepped:Connect(function()
+	if not humanoid.PlatformStand then
+		humanoid.PlatformStand = true
+	end
+	local direction = Vector3.new(0, 0, 0)
+	local lookVector = camera.CFrame.LookVector
+	local rightVector = camera.CFrame.RightVector
+	local upVector = camera.CFrame.UpVector
+	if move.W then
+		direction += lookVector
+	elseif move.S then
+		direction -= lookVector
+	end
+	if move.A then
+		direction -= rightVector
+	elseif move.D then
+		direction += rightVector
+	end
+	if move.Q then
+		direction -= upVector
+	elseif move.E then
+		direction += upVector
+	end
+	if direction.Magnitude > 0 then
+		direction = direction.Unit
+	end
+	local velMag = rootPart.Velocity.Magnitude
+	if velMag < 100 then
+		rootPart.Velocity += direction * 0.5
+	end
+	rootPart.Velocity *= 0.992
+end)
