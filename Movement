@@ -10,19 +10,23 @@ E = Teleport to Mouse Location
 
 -- Initialize Adjustable Variables
 local float = false
+-- Variables
 local speed = false
 local flyspeed = 40
 
-local inputService = game:GetService("UserInputService")
-local tweenService = game:GetService("TweenService")
-local runService = game:GetService("RunService")
-
+-- Player Variables
 local player = game:GetService("Players").LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local rootPart = char:WaitForChild("HumanoidRootPart")
 local mouse = player:GetMouse()
 
-inputService.InputBegan:Connect(function(inp,processed)
+-- Services
+local inputService = game:GetService("UserInputService")
+local tweenService = game:GetService("TweenService")
+local runService = game:GetService("RunService")
+
+-- Input Handling
+inputService.InputBegan:Connect(function(inp,processed) -- Pressed
 	if not processed then
 		if inp.KeyCode == Enum.KeyCode.R then
 			float = true
@@ -39,8 +43,7 @@ inputService.InputBegan:Connect(function(inp,processed)
 		end
 	end
 end)
-
-inputService.InputEnded:Connect(function(inp,processed)
+inputService.InputEnded:Connect(function(inp,processed) -- Released
 	if not processed then
 		if inp.KeyCode == Enum.KeyCode.R then
 			float = false
@@ -50,6 +53,7 @@ inputService.InputEnded:Connect(function(inp,processed)
 	end
 end)
 
+-- Float/Speed Logic
 runService.Heartbeat:Connect(function()
 	if char then
 		if float then
