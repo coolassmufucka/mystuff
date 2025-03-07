@@ -23,11 +23,12 @@ local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
 
 -- Gyroscope to Prevent Tilting
-local gyro = Instance.new("BodyGyro",rootPart)
+local gyro = Instance.new("BodyGyro")
 gyro.MaxTorque = Vector3.new(math.huge,math.huge,math.huge)
 gyro.P = 1000
 gyro.D = 500
 gyro.CFrame = rootPart.CFrame
+gyro.Parent = rootPart
 
 -- Direction Variables for Movement Input
 local dir = {
@@ -115,7 +116,7 @@ runService.RenderStepped:Connect(function()
 
 		-- Hover Physics
 		local ray = Ray.new(rootPart.Position,Vector3.new(0,-1,0)*(height+30))
-		local hit, position = workspace:FindPartOnRay(ray,character)
+		local hit,position = workspace:FindPartOnRay(ray,character)
 		if hit then
 			local curHeight = (rootPart.Position-position).magnitude
 			local dif = height - curHeight
