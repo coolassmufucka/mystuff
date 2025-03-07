@@ -1,7 +1,7 @@
 --[[CONTROLS
 -- Toggle
 C = Select Target
-T = Enable/Disable Teleporting Behind Target
+T = Enable/Disable Teleporting Around Target
 ]]
 
 -- Initialize Adjustable Variables
@@ -20,98 +20,80 @@ local runService = game:GetService("RunService")
 
 -- Create Selection Highlight
 local highlight = Instance.new("Highlight")
-highlight.Parent = repStore
 highlight.FillTransparency = 0.7
 highlight.OutlineTransparency = 0
 highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 highlight.OutlineColor = Color3.new(1, 1, 1)
-highlight.FillColor = Color3.new(0, 1, 0.584)
-
--- Function to Adjust Player's HumanoidRootPart
-local function rootPart(plr)
-	if plr ~= player and plr.Character then
-		local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
-		if hrp then
-			hrp.Size = Vector3.new(12, 12, 12)
-			hrp.CanCollide = false
-		end
-	end
-end
-
--- Apply Adjustments to Existing and New Players
-for _, plr in ipairs(game.Players:GetPlayers()) do
-	rootPart(plr)
-end
-
-game.Players.PlayerAdded:Connect(rootPart)
-
--- Raycast to Select Target
-local function ray()
-	local mousePos = inputService:GetMouseLocation()
-	local viewportRay = camera:ViewportPointToRay(mousePos.X, mousePos.Y)
-	local rayParams = RaycastParams.new()
-	local rayIncluded = {}
-	for _, plr in ipairs(game.Players:GetPlayers()) do
-		if plr ~= player and plr.Character then
-			table.insert(rayIncluded, plr.Character)
-		end
-	end
-	rayParams.FilterDescendantsInstances = rayIncluded
-	rayParams.FilterType = Enum.RaycastFilterType.Include
-	local maxDistance = 1000
-	local currentDistance = 0
-	local hitPart = nil
-	while currentDistance < maxDistance do
-		local rayDirection = viewportRay.Direction * (maxDistance - currentDistance)
-		local raycastResult = workspace:Raycast(viewportRay.Origin, rayDirection, rayParams)
-		if raycastResult then
-			hitPart = raycastResult.Instance
-			local hitParent = hitPart.Parent
-			if hitParent and hitParent:FindFirstChild("HumanoidRootPart") and hitParent ~= player.Character then
-				return hitParent
-			end
-			viewportRay = Ray.new(raycastResult.Position, viewportRay.Direction)
-			currentDistance = (raycastResult.Position - camera.CFrame.Position).Magnitude
-		else
-			break
-		end
-		task.wait()
-	end
-	return nil
-end
+highlight.FillColor = Color3.new(1, 0.0627451, 0.392157)
+highlight.Parent = repStore
 
 -- Input Handling
 inputService.InputBegan:Connect(function(inp, processed)
 	if processed then return end
 	if inp.KeyCode == Enum.KeyCode.C then
 		if not target then
-			local raycastTarget = ray()
-			if raycastTarget and raycastTarget:FindFirstChildOfClass("Humanoid") then
-				highlight.Adornee = raycastTarget
-				target = raycastTarget
+			local mousePos = inputService:GetMouseLocation()
+			local closePlr
+			local close = math.huge
+			for _, plr in ipairs(game.Players:GetPlayers()) do
+				if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+					local hrp = plr.Character.HumanoidRootPart
+					local screenPos,onScreen = camera:WorldToViewportPoint(hrp.Position)
+					if onScreen then
+						local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+						if distance < close then
+							close = distance
+							closePlr = plr
+						end
+					end
+				end
+			end
+			if closePlr and closePlr.Character and closePlr.Character:FindFirstChildOfClass("Humanoid") then
+				highlight.Adornee = closePlr.Character
+				target = closePlr
 			else
+				tping = false
+				highlight.FillColor = Color3.new(1, 0.0627451, 0.392157)
 				highlight.Adornee = nil
 				target = nil
+				camera.CameraSubject = player.Character:FindFirstChild("Humanoid")
 			end
 		else
+			tping = false
+			highlight.FillColor = Color3.new(1, 0.0627451, 0.392157)
 			highlight.Adornee = nil
 			target = nil
+			camera.CameraSubject = player.Character:FindFirstChild("Humanoid")
 		end
 	elseif inp.KeyCode == Enum.KeyCode.T then
 		tping = not tping
 		if not tping then
-			camera.CameraSubject = player.Character.Humanoid
+			highlight.FillColor = Color3.new(1, 0.0627451, 0.392157)
+			camera.CameraSubject = player.Character:FindFirstChild("Humanoid")
+		else
+			highlight.FillColor = Color3.new(0, 1, 0.584)
 		end
 	end
 end)
 
 -- Teleport Loop
 runService.RenderStepped:Connect(function()
-	if tping and target then
-		local hrp = target:FindFirstChild("HumanoidRootPart")
+	if tping and target and target.Character then
+		local hrp = target.Character:FindFirstChild("HumanoidRootPart")
 		if hrp then
-			camera.CameraSubject = target.Head
+			camera.CameraSubject = target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("Humanoid")
 			player.Character:SetPrimaryPartCFrame(hrp.CFrame - hrp.CFrame.LookVector * 2)
+		else
+			camera.CameraSubject = player.Character:FindFirstChild("Humanoid")
+		end
+	end
+end)
+
+-- Target Highlight Loop
+task.spawn(function()
+	while task.wait(.1) do
+		if target and target.Character then
+			highlight.Adornee = target.Character
 		end
 	end
 end)
