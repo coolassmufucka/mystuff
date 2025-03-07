@@ -1,0 +1,120 @@
+-- Services
+local players = game:GetService("Players")
+local inputService = game:GetService("UserInputService")
+local runService = game:GetService("RunService")
+local physService = game:GetService("PhysicsService")
+
+-- Player Variables
+local player = players.LocalPlayer
+local character = player.Character
+local rootPart = character:WaitForChild("HumanoidRootPart")
+local hum = character:WaitForChild("Humanoid")
+local camera = workspace.CurrentCamera
+
+-- Ball Instance
+local ball = Instance.new("Part")
+ball.Shape = Enum.PartType.Ball
+ball.Size = Vector3.new(8, 8, 8)
+ball.Position = rootPart.Position
+ball.Anchored = false
+ball.CanCollide = true
+ball.Material = Enum.Material.ForceField
+ball.CastShadow = false
+ball.Parent = workspace
+
+-- Velocity Instances
+local force = 2.5
+local velocity = Instance.new("BodyVelocity")
+local angleVelocity = Instance.new("BodyAngularVelocity")
+velocity.MaxForce = Vector3.new(100000,0,100000)
+velocity.Velocity = Vector3.new(0,0,0)
+angleVelocity.MaxTorque = Vector3.new(100000,100000,100000)
+angleVelocity.AngularVelocity = Vector3.new(0,0,0)
+velocity.Parent = ball
+angleVelocity.Parent = ball
+
+-- Initialize Camera/Character
+camera.CameraSubject = ball
+hum.Died:Connect(function()
+	ball:Destroy()
+end)
+
+-- Movement Variables
+local move = {
+	W=false,
+	A=false,
+	S=false,
+	D=false
+}
+
+-- Input Logic
+inputService.InputBegan:Connect(function(input,processed) -- Pressed
+	if not processed then
+		if input.KeyCode == Enum.KeyCode.W then
+			move.W = true
+		elseif input.KeyCode == Enum.KeyCode.A then
+			move.A = true
+		elseif input.KeyCode == Enum.KeyCode.S then
+			move.S = true
+		elseif input.KeyCode == Enum.KeyCode.D then
+			move.D = true
+		elseif input.KeyCode == Enum.KeyCode.Space then
+			local ray = workspace:Raycast(ball.Position-Vector3.new(0,3,0),Vector3.new(0,-3,0))
+			if ray and ray.Instance and ray.Instance:IsA("BasePart") then
+				ball.Velocity += Vector3.new(0,80,0)
+			end
+		end
+	end
+end)
+inputService.InputEnded:Connect(function(input,processed) -- Released
+	if not processed then
+		if input.KeyCode == Enum.KeyCode.W then
+			move.W =    false
+		elseif input.KeyCode == Enum.KeyCode.A then
+			move.A = false
+		elseif input.KeyCode == Enum.KeyCode.S then
+			move.S = false
+		elseif input.KeyCode == Enum.KeyCode.D then
+			move.D = false
+		end
+	end
+end)
+
+-- Movement Logic
+runService.RenderStepped:Connect(function()
+	if not hum.PlatformStand then
+		hum.PlatformStand = true
+	end
+	local direction = Vector3.new(0,0,0)
+	if move.W then
+		direction = direction + camera.CFrame.LookVector
+	end
+	if move.S then
+		direction = direction - camera.CFrame.LookVector
+	end
+	if move.A then
+		direction = direction - camera.CFrame.RightVector
+	end
+	if move.D then
+		direction = direction + camera.CFrame.RightVector
+	end
+	if direction.Magnitude > 0 then
+		direction = direction.Unit
+	end
+	velocity.Velocity += direction * force
+	angleVelocity.AngularVelocity += Vector3.new(direction.Z,0,-direction.X) * force / ball.Size.X
+	velocity.Velocity *= .975
+	angleVelocity.AngularVelocity *= .975
+	for _,obj in ipairs(character:GetDescendants()) do
+		if obj:IsA("BasePart") and obj ~= ball then
+			obj.Massless = true
+			obj.CanCollide = false
+		end
+	end
+	if hum.RigType == Enum.HumanoidRigType.R6 then
+		character:SetPrimaryPartCFrame(ball.CFrame*CFrame.new(Vector3.new(0,ball.Size.Y/5,0)))
+	else
+		character:SetPrimaryPartCFrame(ball.CFrame)
+	end
+	rootPart.Velocity = Vector3.new(0,0,0)
+end)
